@@ -1,1 +1,3 @@
-TODO: write a README
+Weather App Server
+
+eh.. nothing interesting here.

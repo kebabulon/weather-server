@@ -29,8 +29,9 @@ from waitress import serve
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:root@localhost/weather-app"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024
-# app.config['UPLOAD_FOLDER'] = "uploads"
+
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024
+app.config['UPLOAD_FOLDER'] = "uploads"
 
 app.debug = True
 
@@ -41,6 +42,37 @@ BaseModel = db.Model
 app.app_context().push()
 
 ph = PasswordHasher()
+
+
+@app.errorhandler(400)
+def bad_request(error):
+    print(error)
+    if isinstance(error.description, ValidationError):
+        original_error = error.description
+        return make_response(jsonify({"error": original_error.message}), 400)
+    # handle other "Bad Request"-errors
+    return error
+
+@app.after_request
+def after(response):
+    print(response.get_data())
+    return response
+
+
+def unixify(time_to_unixify):
+    if time_to_unixify == None: return None
+    return datetime.datetime.timestamp(time_to_unixify)*1000
+
+
+class utcnow(expression.FunctionElement):
+    type = db.DateTime()
+    inherit_cache = True
+
+
+@compiles(utcnow, 'mysql')
+def my_utcnow(element, compiler, **kw):
+    return "(UTC_TIMESTAMP)"
+
 
 class User(BaseModel):
     __tablename__ = "users"
@@ -58,3 +90,80 @@ class User(BaseModel):
            'id': self.id,
            'name': self.name,
         }
+
+
+db.create_all()
+
+# --------------------
+# --------------------
+# TODO: probably change request.json to request.form (depends on the front end impl)
+# TODO: figure out how we are going to encrypt weather data that the clients upload
+# --------------------
+# --------------------
+
+register_schema = {
+    'type': 'object',
+    'properties': {
+        'name': {'type': 'string', 'maxLength': 20, 'minLength': 1},
+        'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^["A-Za-z0-9 !"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~"]*$'},
+    },
+    'required': ['name', 'password']
+}
+
+
+@app.route("/register", methods = ['POST'])
+@expects_json(register_schema)
+def register_():
+    name = request.json.get("name")
+
+    user_exists = db.session.query(User.query.filter(User.name == name).exists()).scalar()
+
+    if not user_exists:
+        password = request.json.get("password")
+
+        new_user = UserReq(name=name, password=ph.hash(password))
+
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({"status": True}), 200
+
+    return jsonify({"error": "name"}), 409
+
+
+login_schema = {
+    'type': 'object',
+    'properties': {
+        'name': {'type': 'string', 'maxLength': 20, 'minLength': 1},
+        'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^["A-Za-z0-9 !"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~"]*$'}
+    },
+    'required': ['name', 'password']
+}
+
+
+@app.route("/login", methods = ['POST'])
+@expects_json(login_schema)
+def login_():
+    name = request.json.get("name")
+    password = request.json.get("password")
+
+    user = User.query.filter_by(name=name).first()
+
+    if not user:
+        return jsonify({"error": "name or password"}), 403
+
+    password_result = False
+
+    try:
+        password_result = ph.verify(user.password, password)
+    except VerifyMismatchError:
+        pass
+
+    if password_result:
+        user.token = token_urlsafe()
+        db.session.commit()
+        user_dict = user.serialize
+        user_dict['token'] = user.token
+        return jsonify(user_dict), 200
+
+    return jsonify({"error": "name or password"}), 403
