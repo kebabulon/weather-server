@@ -96,10 +96,21 @@ db.create_all()
 
 # --------------------
 # --------------------
+#
+# TODOS
+#
 # TODO: probably change request.json to request.form (depends on the front end impl)
 # TODO: figure out how we are going to encrypt weather data that the clients upload
+# TODO: figure out exports (PDF, CSV, excel?)
+# TODO: figure out how to set up a reverse proxy (for my 1 GB timweb server)
 # --------------------
 # --------------------
+
+
+# --------------------
+# USER SYSTEM
+# --------------------
+
 
 register_schema = {
     'type': 'object',
@@ -182,8 +193,53 @@ def logout_():
         return jsonify({"error": "token"}), 401
 
 
+# --------------------
+# FILE MANAGEMENT
+# --------------------
+
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ['csv', 'xlsx']
+
+
+# TODO: file upload
+
+
+# --------------------
+# ANALYZE 
+# --------------------
+
+
+@app.route("/analyze/interval")
+def analyze_interval_():
+    time_interval_from = request.args.get('from', type=int) # unix
+    time_interval_to = request.args.get('to', type=int) # unix
+
+    if time_interval_from > time_interval_to:
+        return jsonify({"error": "interval"}), 400
+
+    # -------
+    # ANALYZE
+    # -------
+
+    # metrics
+    average_temp = None
+    highest_temp = None
+    lowest_temp = None
+
+    # TODO: analyze
+
+    # -------
+    # ANALYZE
+    # -------
+
+    # TODO would also return visualisation? figure out how we are going to send that.
+    return jsonify({
+        "average_temp": surfaces_all,
+        "archived": surfaces_archived
+    }), 200
+
+
 
 
 if __name__ == "__main__":
