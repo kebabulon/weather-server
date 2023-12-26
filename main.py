@@ -167,3 +167,25 @@ def login_():
         return jsonify(user_dict), 200
 
     return jsonify({"error": "name or password"}), 403
+
+
+@app.route("/logout", methods = ['POST'])
+def logout_():
+    user = user_from_token()
+
+    if user:
+        user.token = None
+        db.session.commit()
+
+        return jsonify({"status": True}), 200
+    else:
+        return jsonify({"error": "token"}), 401
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ['csv', 'xlsx']
+
+
+if __name__ == "__main__":
+    # serve(app, host='localhost', port=3333) 
+    app.run(debug=True)
