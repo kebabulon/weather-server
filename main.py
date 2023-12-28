@@ -254,7 +254,7 @@ def predict_():
     # --------------------
     # --------------------
 
-    return jsonify(result_metrics), 200
+    return jsonify(prediction_result), 200
 
 
 if __name__ == "__main__":
