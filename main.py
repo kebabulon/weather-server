@@ -173,10 +173,11 @@ def login_():
     if password_result:
         user.token = token_urlsafe()
         db.session.commit()
-        user_dict = user.serialize
+        user_dict = {
+            "user": user.serialize
+        }
         user_dict['token'] = user.token
         return jsonify(user_dict), 200
-
     return jsonify({"error": "name or password"}), 403
 
 
@@ -210,36 +211,50 @@ def allowed_file(filename):
 # --------------------
 
 
-@app.route("/analyze/interval")
-def analyze_interval_():
+@app.route("/analyze")
+def analyze_():
     time_interval_from = request.args.get('from', type=int) # unix
     time_interval_to = request.args.get('to', type=int) # unix
 
     if time_interval_from > time_interval_to:
         return jsonify({"error": "interval"}), 400
 
-    # -------
-    # ANALYZE
-    # -------
+    # --------------------
+    # --------------------
 
-    # metrics
-    average_temp = None
-    highest_temp = None
-    lowest_temp = None
+    result_metrics = {
+        "average_temp": 0,
+        "highest_temp": 0,
+        "lowest_temp": 0,
+    }
 
     # TODO: analyze
 
-    # -------
-    # ANALYZE
-    # -------
+    # --------------------
+    # --------------------
 
     # TODO would also return visualisation? figure out how we are going to send that.
-    return jsonify({
-        "average_temp": surfaces_all,
-        "archived": surfaces_archived
-    }), 200
+    return jsonify(result_metrics), 200
 
 
+@app.route("/predict")
+def predict_():
+    time = request.args.get('time', type=int) # unix
+
+    # --------------------
+    # --------------------
+
+    prediction_result = {
+        "temp": 0,
+        "weather": "",
+    }
+
+    # TODO: predict
+
+    # --------------------
+    # --------------------
+
+    return jsonify(result_metrics), 200
 
 
 if __name__ == "__main__":
