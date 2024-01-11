@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response, send_file
+from flask import Flask, request, jsonify, make_response, send_file, secure_filename
 from flask_expects_json import expects_json
 from jsonschema import ValidationError
 
@@ -100,9 +100,9 @@ db.create_all()
 # TODOS
 #
 # TODO: probably change request.json to request.form (depends on the front end impl)
-# TODO: figure out how we are going to encrypt weather data that the clients upload
+# TODO: argon2 encrypt the token
 # TODO: figure out exports (PDF, CSV, excel?)
-# TODO: figure out how to set up a reverse proxy (for my 1 GB timweb server)
+# TODO: figure out how to set up a reverse proxy (for my 1 GB timeweb server)
 # --------------------
 # --------------------
 
@@ -112,10 +112,22 @@ db.create_all()
 # --------------------
 
 
+def user_from_token(): 
+    token = request.headers['x-token']
+
+    print(token)
+
+    user = User.query.filter_by(token=token).first()
+    if user:
+        return user
+    else:
+        return None
+
+
 register_schema = {
     'type': 'object',
     'properties': {
-        'name': {'type': 'string', 'maxLength': 20, 'minLength': 1},
+        'name': {'type': 'string', 'maxLength': 20, 'minLength': 1, 'pattern': '^["A-Za-z0-9_]*$'},
         'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^["A-Za-z0-9 !"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~"]*$'},
     },
     'required': ['name', 'password']
@@ -145,7 +157,7 @@ def register_():
 login_schema = {
     'type': 'object',
     'properties': {
-        'name': {'type': 'string', 'maxLength': 20, 'minLength': 1},
+        'name': {'type': 'string', 'maxLength': 20, 'minLength': 1, 'pattern': '^["A-Za-z0-9_]*$'},
         'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^["A-Za-z0-9 !"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~"]*$'}
     },
     'required': ['name', 'password']
@@ -205,14 +217,26 @@ def allowed_file(filename):
 
 @app.route('/upload', methods=['POST'])
 def upload_file_():
+    user = user_from_token()
+
+    if not user:
+        return jsonify({"error": "token"}), 401
+
+    # TODO: check if the file is not over the size limit
+
     if 'file' not in request.files:
         return jsonify({"error": "file"}), 400
     file = request.files['file']
     if file.filename == '':
         return jsonify({"error": "filename"}), 400
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename) # TODO: import secure_filename
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        filename = secure_filename(file.filename)
+        file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name)
+        if not os.path.exists(file_dir):
+            os.makedirs(file_dir)
+        file_dir = os.path.join(file_dir, filename)
+        file.save(file_dir) # TODO: figure out how to encrypt this
+
         return jsonify({"status": True})
 
 
