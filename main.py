@@ -1,6 +1,7 @@
-from flask import Flask, request, jsonify, make_response, send_file, secure_filename
+from flask import Flask, request, jsonify, make_response, send_file
 from flask_expects_json import expects_json
 from jsonschema import ValidationError
+from werkzeug.utils import secure_filename
 
 from flask_sqlalchemy import SQLAlchemy
 
@@ -144,7 +145,7 @@ def register_():
     if not user_exists:
         password = request.json.get("password")
 
-        new_user = UserReq(name=name, password=ph.hash(password))
+        new_user = User(name=name, password=ph.hash(password))
 
         db.session.add(new_user)
         db.session.commit()
