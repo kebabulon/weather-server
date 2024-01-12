@@ -36,6 +36,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = "uploads"
+app.config['DATASET_FOLDER'] = "datasets"
+app.config['GRAPH_FOLDER'] = "graphs"
 
 app.debug = True
 
@@ -238,9 +240,7 @@ def upload_file_():
     if not user:
         return jsonify({"error": "token"}), 401
 
-    file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name)
-    if not os.path.exists(file_dir):
-        os.makedirs(file_dir)
+    file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name, app.config['DATASET_FOLDER'])
 
     if request.method == 'POST':
 
@@ -252,6 +252,9 @@ def upload_file_():
         if file.filename == '':
             return jsonify({"error": "filename"}), 400
         if file and allowed_file(file.filename):
+            if not os.path.exists(file_dir):
+                os.makedirs(file_dir)
+
             filename = secure_filename(file.filename)
             file_dir = os.path.join(file_dir, filename)
             file.save(file_dir) # TODO: figure out how to encrypt this
@@ -278,7 +281,7 @@ def uploads_():
     if not user:
         return jsonify({"error": "token"}), 401
 
-    file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name)
+    file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name, app.config['DATASET_FOLDER'])
     files = os.listdir(file_dir)
 
     files_info = [
@@ -289,15 +292,48 @@ def uploads_():
     return jsonify(files_info), 200
 
 
+graph_types = ["analyze_1", "trend_1", "predict_1"] # feel free to add more graph types or change the current ones
+
+
+@app.route("/graph")
+def graph_():
+    user = user_from_token()
+
+    if not user:
+        return jsonify({"error": "token"}), 401
+
+    graph_type = request.args.get('type', type=str)
+
+    if not graph_type in graph_types:
+        return jsonify({"error": "graph type"}), 400
+
+    file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name, app.config['GRAPH_FOLDER'], graph_type)
+    if not os.path.exists(file_dir):
+        return jsonify({"error": "no file"}), 400
+
+    return send_file(file_dir)
+
 # --------------------
-# ANALYZE 
+# ANALYZE, TRENDS, PREDICT
 # --------------------
 
 
 @app.route("/analyze")
 def analyze_():
+    user = user_from_token()
+
+    if not user:
+        return jsonify({"error": "token"}), 401
+
     time_interval_from = request.args.get('from', type=int) # unix
     time_interval_to = request.args.get('to', type=int) # unix
+    filename = request.args.get('filename', type=str)
+
+    filename = secure_filename(file.filename)
+
+    file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name, app.config['DATASET_FOLDER'], filename)
+    if not os.path.exists(file_dir):
+        return jsonify({"error": "no file"}), 400
 
     if time_interval_from > time_interval_to:
         return jsonify({"error": "interval"}), 400
@@ -312,6 +348,7 @@ def analyze_():
     }
 
     # TODO: analyze
+    # filepath variable: file_dir
 
     # --------------------
     # --------------------
@@ -323,6 +360,7 @@ def analyze_():
 @app.route("/predict")
 def predict_():
     time = request.args.get('time', type=int) # unix
+    city = request.args.get('city', type=str) # TODO: give me a list of all the cities
 
     # --------------------
     # --------------------
