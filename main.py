@@ -13,6 +13,9 @@ from sqlalchemy.sql import expression
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
+import jwt
+from secret import JWT_KEY
+
 from secrets import token_urlsafe
 
 import datetime
@@ -82,7 +85,6 @@ class User(BaseModel):
 
     name = db.Column("name", db.String(20), nullable=False, unique=True)
     password = db.Column("password", db.CHAR(97), nullable=False)
-    token = db.Column("token", db.CHAR(43))
 
 
     @property
@@ -116,9 +118,14 @@ db.create_all()
 def user_from_token(): 
     token = request.headers['x-token']
 
-    print(token)
+    try:
+        payload = jwt.decode(token, JWT_KEY, algorithms="HS256")
+    except jwt.exceptions.ExpiredSignatureError:
+        payload = None
 
-    user = User.query.filter_by(token=token).first()
+    if not payload: return None
+
+    user = User.query.filter_by(name=payload["name"]).first()
     if user:
         return user
     else:
@@ -184,27 +191,27 @@ def login_():
         pass
 
     if password_result:
-        user.token = token_urlsafe()
         db.session.commit()
-        user_dict = {
-            "user": user.serialize
-        }
-        user_dict['token'] = user.token
-        return jsonify(user_dict), 200
+
+        token = jwt.encode({"name": user.name, "exp": datetime.now(tz=timezone.utc)}, JWT_KEY)
+
+        return jsonify({"token": token}), 200
     return jsonify({"error": "name or password"}), 403
 
 
-@app.route("/logout", methods = ['POST'])
-def logout_():
-    user = user_from_token()
+# no longer needed because we use jwt
 
-    if user:
-        user.token = None
-        db.session.commit()
+# @app.route("/logout", methods = ['POST'])
+# def logout_():
+#     user = user_from_token()
 
-        return jsonify({"status": True}), 200
-    else:
-        return jsonify({"error": "token"}), 401
+#     if user:
+#         user.token = None
+#         db.session.commit()
+
+#         return jsonify({"status": True}), 200
+#     else:
+#         return jsonify({"error": "token"}), 401
 
 
 # --------------------
