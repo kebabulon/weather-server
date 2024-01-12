@@ -191,9 +191,7 @@ def login_():
         pass
 
     if password_result:
-        db.session.commit()
-
-        token = jwt.encode({"name": user.name, "exp": datetime.now(tz=timezone.utc)}, JWT_KEY)
+        token = jwt.encode({"name": user.name, "exp": datetime.now(tz=timezone.utc) + datetime.timedelta(weeks=1)}, JWT_KEY)
 
         return jsonify({"token": token}), 200
     return jsonify({"error": "name or password"}), 403
@@ -223,29 +221,72 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ['csv', 'xlsx']
 
 
-@app.route('/upload', methods=['POST'])
+upload_file_schema = {
+    'type': 'object',
+    'properties': {
+        'filename': {'type': 'string'}
+    },
+    'required': ['filename']
+}
+
+
+@app.route('/upload', methods=['POST, DELETE'])
+@expects_json(upload_file_schema)
 def upload_file_():
     user = user_from_token()
 
     if not user:
         return jsonify({"error": "token"}), 401
 
-    # TODO: check if the file is not over the size limit
+    file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name)
+    if not os.path.exists(file_dir):
+        os.makedirs(file_dir)
 
-    if 'file' not in request.files:
-        return jsonify({"error": "file"}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "filename"}), 400
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name)
-        if not os.path.exists(file_dir):
-            os.makedirs(file_dir)
+    if request.method == 'POST':
+
+        # TODO: check if the file is not over the size limit
+
+        if 'file' not in request.files:
+            return jsonify({"error": "file"}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "filename"}), 400
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_dir = os.path.join(file_dir, filename)
+            file.save(file_dir) # TODO: figure out how to encrypt this
+
+            return jsonify({"status": True})
+
+    elif request.method == 'DELETE':
+        filename = request.json.get("filename")
+        filename = secure_filename(filename)
         file_dir = os.path.join(file_dir, filename)
-        file.save(file_dir) # TODO: figure out how to encrypt this
+
+        try:
+            os.remove(file_dir)
+        except OSError:
+            return jsonify({"error": "os error"}), 500
 
         return jsonify({"status": True})
+
+
+@app.route("/uploads")
+def uploads_():
+    user = user_from_token()
+
+    if not user:
+        return jsonify({"error": "token"}), 401
+
+    file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name)
+    files = os.listdir(file_dir)
+
+    files_info = [
+        [f, os.stat(os.path.join(path, f)).st_size]
+        for f in files
+    ]
+
+    return jsonify(files_info), 200
 
 
 # --------------------
