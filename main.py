@@ -31,7 +31,7 @@ from io import BytesIO
 from waitress import serve
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:root@localhost/weather-app"
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:root@localhost/weather_app"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024
@@ -193,7 +193,7 @@ def login_():
         pass
 
     if password_result:
-        token = jwt.encode({"name": user.name, "exp": datetime.now(tz=timezone.utc) + datetime.timedelta(weeks=1)}, JWT_KEY)
+        token = jwt.encode({"name": user.name, "exp": datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(weeks=1)}, JWT_KEY)
 
         return jsonify({"token": token}), 200
     return jsonify({"error": "name or password"}), 403
@@ -285,7 +285,7 @@ def uploads_():
     files = os.listdir(file_dir)
 
     files_info = [
-        [f, os.stat(os.path.join(path, f)).st_size]
+        [f, os.stat(os.path.join(file_dir, f)).st_size]
         for f in files
     ]
 
@@ -329,7 +329,7 @@ def analyze_():
     time_interval_to = request.args.get('to', type=int) # unix
     filename = request.args.get('filename', type=str)
 
-    filename = secure_filename(file.filename)
+    filename = secure_filename(filename)
 
     file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name, app.config['DATASET_FOLDER'], filename)
     if not os.path.exists(file_dir):
