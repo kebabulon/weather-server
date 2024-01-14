@@ -137,8 +137,8 @@ def user_from_token():
 register_schema = {
     'type': 'object',
     'properties': {
-        'name': {'type': 'string', 'maxLength': 20, 'minLength': 1, 'pattern': '^["A-Za-z0-9_]*$'},
-        'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^["A-Za-z0-9 !"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~"]*$'},
+        'name': {'type': 'string', 'maxLength': 20, 'minLength': 1, 'pattern': '^[A-Za-z0-9_]*$'},
+        'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^[A-Za-z0-9 !"#$%&\'()*+,./:;<=>?@[\]^_`{|}~-]*$'},
     },
     'required': ['name', 'password']
 }
@@ -167,8 +167,8 @@ def register_():
 login_schema = {
     'type': 'object',
     'properties': {
-        'name': {'type': 'string', 'maxLength': 20, 'minLength': 1, 'pattern': '^["A-Za-z0-9_]*$'},
-        'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^["A-Za-z0-9 !"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~"]*$'}
+        'name': {'type': 'string', 'maxLength': 20, 'minLength': 1, 'pattern': '^[A-Za-z0-9_]*$'},
+        'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^[A-Za-z0-9 !"#$%&\'()*+,./:;<=>?@[\]^_`{|}~-]*$'}
     },
     'required': ['name', 'password']
 }
