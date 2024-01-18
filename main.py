@@ -138,7 +138,7 @@ register_schema = {
     'type': 'object',
     'properties': {
         'name': {'type': 'string', 'maxLength': 20, 'minLength': 1, 'pattern': '^[A-Za-z0-9_]*$'},
-        'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^[A-Za-z0-9 !"#$%&\'()*+,./:;<=>?@[\]^_`{|}~-]*$'},
+        'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^[A-Za-z0-9@$!%*#?&]*$'},
     },
     'required': ['name', 'password']
 }
@@ -168,7 +168,7 @@ login_schema = {
     'type': 'object',
     'properties': {
         'name': {'type': 'string', 'maxLength': 20, 'minLength': 1, 'pattern': '^[A-Za-z0-9_]*$'},
-        'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^[A-Za-z0-9 !"#$%&\'()*+,./:;<=>?@[\]^_`{|}~-]*$'}
+        'password': {'type': 'string', 'maxLength': 20, 'minLength': 5, 'pattern': '^[A-Za-z0-9@$!%*#?&]*$'}
     },
     'required': ['name', 'password']
 }
@@ -193,7 +193,7 @@ def login_():
         pass
 
     if password_result:
-        token = jwt.encode({"name": user.name, "exp": datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(weeks=1)}, JWT_KEY)
+        token = jwt.encode({"name": user.name, "exp": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(weeks=1)}, JWT_KEY)
 
         return jsonify({"token": token}), 200
     return jsonify({"error": "name or password"}), 403
