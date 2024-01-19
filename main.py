@@ -260,7 +260,7 @@ def upload_file_():
             file.save(file_dir) # TODO: figure out how to encrypt this
 
             return jsonify({"status": True})
-        return jsonify({"error": "ext"})
+        return jsonify({"error": "ext"}), 400
 
     elif request.method == 'DELETE':
         filename = request.json.get("filename")
