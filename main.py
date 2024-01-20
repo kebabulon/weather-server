@@ -223,7 +223,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ['csv', 'xlsx']
 
 
-upload_file_schema = {
+upload_schema = {
     'type': 'object',
     'properties': {
         'filename': {'type': 'string'}
@@ -232,9 +232,9 @@ upload_file_schema = {
 }
 
 
-@app.route('/upload', methods=['POST, DELETE'])
-@expects_json(upload_file_schema)
-def upload_file_():
+@app.route('/upload', methods=['POST', 'DELETE'])
+@expects_json(upload_schema, ignore_for=['POST'])
+def upload_():
     user = user_from_token()
 
     if not user:
@@ -245,6 +245,10 @@ def upload_file_():
     if request.method == 'POST':
 
         # TODO: check if the file is not over the size limit
+        if os.path.exists(file_dir):
+            dir_size = sum(d.stat().st_size for d in os.scandir(file_dir) if d.is_file())
+            if dir_size > 10*1024*1024*1024:
+                return jsonify({"error": "file size"}), 400
 
         if 'file' not in request.files:
             return jsonify({"error": "file"}), 400
