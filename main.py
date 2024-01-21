@@ -289,12 +289,7 @@ def uploads_():
     file_dir = os.path.join(app.config['UPLOAD_FOLDER'], user.name, app.config['DATASET_FOLDER'])
     files = os.listdir(file_dir)
 
-    files_info = [
-        [f, os.stat(os.path.join(file_dir, f)).st_size]
-        for f in files
-    ]
-
-    return jsonify(files_info), 200
+    return jsonify({"files": files}), 200
 
 
 graph_types = ["analyze_1", "trend_1", "predict_1"] # feel free to add more graph types or change the current ones
@@ -358,7 +353,9 @@ def analyze_():
     # --------------------
     # --------------------
 
-    # TODO would also return visualisation? figure out how we are going to send that.
+
+    graph_file_path = os.path.join(app.config['UPLOAD_FOLDER'], user.name, app.config['GRAPH_FOLDER'], 'analyze_1.png')
+
     return jsonify(result_metrics), 200
 
 
