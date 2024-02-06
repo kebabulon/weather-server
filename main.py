@@ -374,12 +374,14 @@ def predict_():
         "temp": 0,
     }
 
+    prediction_days = []
+
     # TODO: predict
 
     # --------------------
     # --------------------
 
-    return jsonify(prediction_result), 200
+    return jsonify({"days": prediction_days}), 200
 
 
 if __name__ == "__main__":
