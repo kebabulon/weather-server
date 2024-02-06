@@ -122,7 +122,7 @@ def user_from_token():
 
     try:
         payload = jwt.decode(token, JWT_KEY, algorithms="HS256")
-    except jwt.exceptions.ExpiredSignatureError:
+    except:
         payload = None
 
     if not payload: return None
@@ -362,14 +362,16 @@ def analyze_():
 @app.route("/predict")
 def predict_():
     time = request.args.get('time', type=int) # unix
-    city = request.args.get('city', type=str) # TODO: give me a list of all the cities
+    time_date = unixify(time)
 
     # --------------------
     # --------------------
 
     prediction_result = {
+        "volume": 0,
+        "wetness": 0,
+        "wind_speed": 0,
         "temp": 0,
-        "weather": "",
     }
 
     # TODO: predict
