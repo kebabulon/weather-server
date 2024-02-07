@@ -30,6 +30,9 @@ from io import BytesIO
 
 from waitress import serve
 
+import dill as pickle
+import pandas as pd
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:root@localhost/weather_app"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -359,10 +362,124 @@ def analyze_():
     return jsonify(result_metrics), 200
 
 
-@app.route("/predict")
+
+   
+with open('models/model_te/fb_model_te.h5py', 'rb') as f:
+    fb_te = pickle.load(f)
+with open('models/model_te/model_te.h5py', 'rb') as f:
+    model_te = pickle.load(f)
+
+
+def f_te(end_time):
+    global fb_te, model_te
+    start = '2022-12-31'
+     
+    start = datetime.datetime.strptime(start, '%Y-%m-%d')
+    end = datetime.datetime.strptime(end_time, '%Y-%m-%d')   
+    
+    daterange = [(start + datetime.timedelta(days=x)).strftime('%Y-%m-%d') for x in range(0, (end-start).days)]
+    new_test_series = pd.DataFrame(pd.to_datetime(daterange), columns=['ds'])
+    
+    predictions = fb_te.make_future_dataframe(periods=len(new_test_series), freq='D')
+    forecast = fb_te.predict(predictions)
+    
+    test_gbt = new_test_series.merge(forecast, on='ds', how='left')
+    
+    return model_te.predict(test_gbt)
+    
+
+with open('models/model_os/fb_model_os.h5py', 'rb') as f:
+    fb_os = pickle.load(f)
+with open('models/model_os/model_os.h5py', 'rb') as f:
+    model_os = pickle.load(f)
+
+
+def f_os(end_time):
+    global fb_os, model_os
+    start = '2022-12-31'
+    
+    
+    start = datetime.datetime.strptime(start, '%Y-%m-%d')
+    end = datetime.datetime.strptime(end_time, '%Y-%m-%d')   
+    
+    daterange = [(start + datetime.timedelta(days=x)).strftime('%Y-%m-%d') for x in range(0, (end-start).days)]
+    new_test_series = pd.DataFrame(pd.to_datetime(daterange), columns=['ds'])
+    
+    predictions = fb_os.make_future_dataframe(periods=len(new_test_series), freq='D')
+    forecast = fb_os.predict(predictions)
+    
+    test_gbt = new_test_series.merge(forecast, on='ds', how='left')
+    
+    return model_os.predict(test_gbt)
+    
+
+
+with open('models/model_vt/fb_model_vt.h5py', 'rb') as f:
+    fb_vt = pickle.load(f)
+with open('models/model_vt/model_vt.h5py', 'rb') as f:
+    model_vt = pickle.load(f)
+
+
+def f_vt(end_time):
+    global fb_vt, model_vt
+    start = '2022-12-31'
+     
+    start = datetime.datetime.strptime(start, '%Y-%m-%d')
+    end = datetime.datetime.strptime(end_time, '%Y-%m-%d')   
+    
+    daterange = [(start + datetime.timedelta(days=x)).strftime('%Y-%m-%d') for x in range(0, (end-start).days)]
+    new_test_series = pd.DataFrame(pd.to_datetime(daterange), columns=['ds'])
+    
+    predictions = fb_vt.make_future_dataframe(periods=len(new_test_series), freq='D')
+    forecast = fb_vt.predict(predictions)
+    
+    test_gbt = new_test_series.merge(forecast, on='ds', how='left')
+    
+    return model_vt.predict(test_gbt)
+
+
+with open('models/model_wl/fb_model_wl.h5py', 'rb') as f:
+    fb_wl = pickle.load(f)
+with open('models/model_wl/model_wl.h5py', 'rb') as f:
+    model_wl = pickle.load(f)
+
+
+def f_wl(end_time):
+    global fb_wl, model_wl
+    start = '2022-12-31'
+     
+    start = datetime.datetime.strptime(start, '%Y-%m-%d')
+    end = datetime.datetime.strptime(end_time, '%Y-%m-%d')   
+    
+    daterange = [(start + datetime.timedelta(days=x)).strftime('%Y-%m-%d') for x in range(0, (end-start).days)]
+    new_test_series = pd.DataFrame(pd.to_datetime(daterange), columns=['ds'])
+    
+    predictions = fb_wl.make_future_dataframe(periods=len(new_test_series), freq='D')
+    forecast = fb_wl.predict(predictions)
+    
+    test_gbt = new_test_series.merge(forecast, on='ds', how='left')
+    
+    return model_wl.predict(test_gbt)
+
+
+predict_schema = {
+    'type': 'object',
+    'properties': {
+        'days': {'type': 'number'}
+    },
+    'required': ['days']
+}
+
+
+@app.route('/predict', methods=['POST'])
+@expects_json(predict_schema)
 def predict_():
-    time = request.args.get('time', type=int) # unix
-    time_date = unixify(time)
+    user = user_from_token()
+
+    if not user:
+        return jsonify({"error": "token"}), 401
+
+    time = request.json.get("days")
 
     # --------------------
     # --------------------
@@ -376,7 +493,21 @@ def predict_():
 
     prediction_days = []
 
-    # TODO: predict
+    end = '2023-01-0' + str(max(min(time, 7), 1))
+
+    te = f_te(end)
+    os = f_os(end)
+    vt = f_vt(end)
+    wl = f_wl(end)
+
+    for i in range(len(te)):
+        pred = prediction_result.copy()
+        pred["temp"] = te[i]
+        pred["volume"] = os[i]
+        pred["wind_speed"] = vt[i]
+        pred["wetness"] = wl[i]
+        prediction_days.append(pred)
+    
 
     # --------------------
     # --------------------
